@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>智能记账</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+    <!-- ===== 顶部标题栏 ===== -->
+    <header class="app-header">
+        <h1>🧾 智能记账</h1>
+        <span class="sync-status" id="syncStatus">⏳ 待同步: 0</span>
+    </header>
+
+    <!-- ===== Tab 内容区域 ===== -->
+    <main class="tab-content">
+        <!-- Tab 1: 记账 -->
+        <section id="tab-record" class="tab-panel active">
+            <div class="record-container">
+                <!-- 语音录入 -->
+                <div class="voice-container">
+                    <button class="voice-btn" id="voiceBtn">
+                        <span class="voice-icon">🎙️</span>
+                        <span class="voice-text">按住说话</span>
+                    </button>
+                    <div class="voice-wave" id="voiceWave" style="display:none;">
+                        <span></span><span></span><span></span>
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+
+                <!-- 文字录入 -->
+                <div class="text-input-container">
+                    <input type="text" id="textInput" placeholder="输入消费，如：吃火锅186">
+                    <button id="textSubmitBtn">✓</button>
+                </div>
+
+                <!-- 今日汇总 -->
+                <div class="today-summary" id="todaySummary">
+                    <span>📅 今日：¥0.00</span>
+                    <span>📝 0 笔</span>
+                </div>
+
+                <!-- 待同步提示 -->
+                <div class="pending-banner" id="pendingBanner" style="display:none;">
+                    ⏳ 有 <span id="pendingCount">0</span> 条待同步
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 2: 流水 -->
+        <section id="tab-list" class="tab-panel">
+            <div class="list-container">
+                <div class="list-filters">
+                    <button class="filter-btn active" data-filter="all">全部</button>
+                    <button class="filter-btn" data-filter="pending">待同步</button>
+                    <button class="filter-btn" data-filter="synced">已同步</button>
+                </div>
+                <ul class="expense-list" id="expenseList">
+                    <li class="empty-tip">暂无记录，去记一笔吧 📝</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Tab 3: 分析 -->
+        <section id="tab-analytics" class="tab-panel">
+            <div class="analytics-container">
+                <div class="analytics-placeholder" id="analyticsPlaceholder">
+                    <div class="empty-icon">📊</div>
+                    <p>暂无分析数据</p>
+                    <p class="hint">同步后即可查看月度报告</p>
+                </div>
+                <div id="analyticsContent" style="display:none;">
+                    <div class="summary-cards" id="summaryCards"></div>
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="ai-summary" id="aiSummary"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 4: 设置 -->
+        <section id="tab-settings" class="tab-panel">
+            <div class="settings-container">
+                <div class="setting-group">
+                    <h3>🌐 同步设置</h3>
+                    <div class="setting-item">
+                        <label>电脑 IP</label>
+                        <input type="text" id="serverIP" value="192.168.2.1">
+                    </div>
+                    <div class="setting-item">
+                        <label>端口</label>
+                        <input type="text" id="serverPort" value="8000">
+                    </div>
+                    <button class="sync-btn" id="syncBtn">🔄 立即同步</button>
+                    <div class="sync-result" id="syncResult"></div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>📦 数据管理</h3>
+                    <button class="danger-btn" id="clearPendingBtn">🗑️ 清空待同步</button>
+                    <button class="danger-btn" id="clearAllBtn">⚠️ 清空所有数据</button>
+                </div>
+
+                <div class="setting-group">
+                    <h3>ℹ️ 关于</h3>
+                    <p class="about-text">智能记账 v1.0</p>
+                    <p class="about-text">数据本地存储，隐私安全</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===== 底部 Tab 导航 ===== -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="record">
+            <span class="tab-icon">📝</span>
+            <span class="tab-label">记账</span>
+        </button>
+        <button class="tab-btn" data-tab="list">
+            <span class="tab-icon">📋</span>
+            <span class="tab-label">流水</span>
+        </button>
+        <button class="tab-btn" data-tab="analytics">
+            <span class="tab-icon">📊</span>
+            <span class="tab-label">分析</span>
+        </button>
+        <button class="tab-btn" data-tab="settings">
+            <span class="tab-icon">⚙️</span>
+            <span class="tab-label">设置</span>
+        </button>
+    </nav>
+
+    <!-- ===== 依赖 ===== -->
+    <script src="js/db.js"></script>
+    <script src="js/sync.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -343,11 +343,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 
-from src.database import get_expense_by_id, save_expense
+from database.database import get_expense_by_id, save_expense
 from src.ollama_parser import parse_with_ollama
 from src.stats import build_analytics_payload
 
 app = FastAPI()
+
 
 class SyncRecord(BaseModel):
     id: str
@@ -359,8 +360,10 @@ class SyncRecord(BaseModel):
     created_at: str
     version: int
 
+
 class SyncRequest(BaseModel):
     records: List[SyncRecord]
+
 
 @app.post("/sync")
 def sync(request: SyncRequest):

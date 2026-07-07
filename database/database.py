@@ -1,39 +1,58 @@
 import pymysql
+import pymysql.err
 import json
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-
-# 导入配置
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import MYSQL_CONFIG
+import importlib  # 新增
 
 
 def get_connection():
-    """获取 MySQL 数据库连接"""
-    return pymysql.connect(**MYSQL_CONFIG)
+    """获取 MySQL 数据库连接（强制重新加载 config，确保密码最新）"""
+    import database.config as config_module
+    importlib.reload(config_module)  # 重新加载，使 .env 生效
+    return pymysql.connect(**config_module.MYSQL_CONFIG)
 
 
 def init_db():
-    """初始化数据库表"""
-    conn = get_connection()
-    cursor = conn.cursor()
+    """初始化数据库（自动创建库和表）"""
+    conn = None
+    try:
+        conn = get_connection()
+    except pymysql.err.OperationalError as e:
+        if e.args[0] == 1049:
+            print("⚠️  数据库不存在，正在自动创建...")
+            # 重新加载 config 获取配置（不带 database）
+            import database.config as config_module
+            importlib.reload(config_module)
+            temp_config = config_module.MYSQL_CONFIG.copy()
+            temp_config.pop("database")
+            conn = pymysql.connect(**temp_config)
+            cursor = conn.cursor()
+            cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{config_module.MYSQL_CONFIG['database']}` "
+                f"CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
+            cursor.close()
+            conn.close()
+            print("✅ 数据库创建成功")
+            conn = get_connection()
+        else:
+            raise
 
-    # 建表语句
+    cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id VARCHAR(36) PRIMARY KEY COMMENT 'UUID，与手机端一致',
             raw_text VARCHAR(500) NOT NULL COMMENT '用户原始输入',
             amount DECIMAL(10, 2) NOT NULL COMMENT '金额',
-            category VARCHAR(50) NOT NULL COMMENT '分类：餐饮/交通/购物/娱乐/居住/医疗/教育/其他',
+            category VARCHAR(50) NOT NULL COMMENT '分类',
             description VARCHAR(200) COMMENT '简短描述',
             date DATETIME NOT NULL COMMENT '消费时间',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
             synced_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '同步时间',
-            ai_parsed JSON COMMENT 'Ollama解析结果（JSON）',
-            is_deleted TINYINT DEFAULT 0 COMMENT '软删除标记 0-正常 1-已删除',
-            version INT DEFAULT 1 COMMENT '版本号，用于冲突检测',
+            ai_parsed JSON COMMENT 'Ollama解析结果',
+            is_deleted TINYINT DEFAULT 0 COMMENT '软删除标记',
+            version INT DEFAULT 1 COMMENT '版本号',
             INDEX idx_date (date),
             INDEX idx_category (category),
             INDEX idx_deleted (is_deleted)
@@ -53,12 +72,10 @@ def save_expense(record: Dict[str, Any]) -> bool:
     cursor = conn.cursor()
 
     try:
-        # 检查是否存在
         cursor.execute("SELECT id FROM expenses WHERE id = %s", (record.get("id"),))
         exists = cursor.fetchone()
 
         if exists:
-            # 更新
             cursor.execute("""
                 UPDATE expenses SET
                     raw_text = %s,
@@ -79,7 +96,6 @@ def save_expense(record: Dict[str, Any]) -> bool:
                 record.get("id")
             ))
         else:
-            # 插入
             cursor.execute("""
                 INSERT INTO expenses
                 (id, raw_text, amount, category, description, date, created_at, ai_parsed, version)
@@ -127,7 +143,6 @@ def get_all_expenses(year: Optional[int] = None, month: Optional[int] = None) ->
     cursor.close()
     conn.close()
 
-    # 处理 JSON 字段
     for row in rows:
         if row.get('ai_parsed'):
             row['ai_parsed'] = json.loads(row['ai_parsed'])
@@ -174,7 +189,6 @@ def get_monthly_stats(year: int, month: int) -> Dict:
     conn = get_connection()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    # 总支出
     cursor.execute("""
         SELECT 
             COALESCE(SUM(amount), 0) as total,
@@ -185,7 +199,6 @@ def get_monthly_stats(year: int, month: int) -> Dict:
     """, (year, month))
     result = cursor.fetchone()
 
-    # 按类别统计
     cursor.execute("""
         SELECT category, COALESCE(SUM(amount), 0) as total
         FROM expenses 
@@ -195,7 +208,6 @@ def get_monthly_stats(year: int, month: int) -> Dict:
     """, (year, month))
     by_category = cursor.fetchall()
 
-    # 最大单笔
     cursor.execute("""
         SELECT id, amount, category, description, date
         FROM expenses 
@@ -218,8 +230,7 @@ def get_monthly_stats(year: int, month: int) -> Dict:
 
 
 def get_comparison(current_year: int, current_month: int) -> Dict:
-    """获取对比数据（上月、去年同期）"""
-    # 计算上月
+    """获取对比数据（上月、去年同月）"""
     if current_month == 1:
         prev_year, prev_month = current_year - 1, 12
     else:
@@ -244,12 +255,9 @@ def get_comparison(current_year: int, current_month: int) -> Dict:
     }
 
 
-# 测试代码
 if __name__ == "__main__":
-    # 初始化数据库
     init_db()
 
-    # 测试插入一条记录
     test_record = {
         "id": "test-001",
         "raw_text": "今天吃火锅花了186",
@@ -263,14 +271,11 @@ if __name__ == "__main__":
     save_expense(test_record)
     print("✅ 测试记录插入成功")
 
-    # 测试查询
     rows = get_all_expenses()
     print(f"📊 当前共有 {len(rows)} 条记录")
     for row in rows[:3]:
         print(f"  - {row['date']} | {row['category']} | ¥{row['amount']} | {row['description']}")
 
-    # 测试月度统计
-    from datetime import datetime
     now = datetime.now()
     stats = get_monthly_stats(now.year, now.month)
     print(f"\n📊 本月统计：总支出 ¥{stats['total']}，共 {stats['count']} 笔")
