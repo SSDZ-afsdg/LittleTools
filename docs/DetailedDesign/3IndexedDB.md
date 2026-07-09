@@ -199,7 +199,7 @@ function getSyncMetadata(): Promise<SyncMetadata>
 ### 3.7 初始化代码骨架
 
 ```javascript
-// db.js - IndexedDB 初始化
+// db2.js - IndexedDB 初始化
 
 const DB_NAME = 'SmartAccountingDB';
 const DB_VERSION = 1;

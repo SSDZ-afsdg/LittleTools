@@ -14,8 +14,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware  # <-- 新增
-from pydantic import BaseModel, Field
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field, ConfigDict  # <-- 新增 ConfigDict
 import uvicorn
 
 # 导入项目模块
@@ -36,6 +36,8 @@ from src.stats import build_analytics_payload
 
 class SyncRecord(BaseModel):
     """单条同步记录"""
+    model_config = ConfigDict(extra='ignore')  # <-- 忽略未定义的字段（如 status）
+
     id: str = Field(..., description="UUID")
     raw_text: str = Field(..., description="用户原始输入")
     amount: float = Field(..., description="金额")
@@ -80,10 +82,10 @@ app = FastAPI(
 # ===== 添加 CORS 中间件（解决跨域问题） =====
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],            # 允许所有来源（开发环境），生产环境可限制具体域名
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],            # 允许所有 HTTP 方法
-    allow_headers=["*"],            # 允许所有请求头
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -136,6 +138,12 @@ async def sync_expenses(request: SyncRequest):
     4. 调用统计模块生成分析数据
     5. 返回同步结果 + 分析数据
     """
+
+    # 打印所有请求数据
+    print("=== 收到的同步请求 ===")
+    for i, record in enumerate(request.records):
+        print(f"记录 {i + 1}: {record.model_dump()}")
+    print("======================")
     # ---------- 5.1 冲突检测 ----------
     conflicts = []
     for record in request.records:

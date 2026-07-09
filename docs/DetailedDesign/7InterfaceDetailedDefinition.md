@@ -237,7 +237,7 @@ GET http://192.168.1.100:8000/health
 ### 7.4 手机端调用示例
 
 ```javascript
-// mobile/js/sync.js
+// mobile/js/sync2.js
 
 async function syncToComputer() {
     // 1. 从 IndexedDB 获取所有 pending 记录

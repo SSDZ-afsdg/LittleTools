@@ -1,5 +1,5 @@
 // ============================================================
-// sync.js - 同步逻辑
+// sync2.js - 同步逻辑
 // ============================================================
 
 // ===== 获取服务器地址 =====
@@ -15,7 +15,14 @@ async function syncExpenses() {
     const syncBtn = document.getElementById('syncBtn');
 
     // 获取待同步记录
-    const pending = await getPendingExpenses();
+    let pending = await getPendingExpenses();
+
+    // ⭐ 确保 pending 是数组（防御性编程）
+    if (!Array.isArray(pending)) {
+        console.warn('getPendingExpenses 返回的不是数组:', pending);
+        pending = [];
+    }
+
     if (pending.length === 0) {
         resultEl.className = 'sync-result';
         resultEl.textContent = '✅ 没有待同步的记录';
@@ -30,34 +37,38 @@ async function syncExpenses() {
 
     try {
         const serverURL = getServerURL();
+
+        // 过滤掉 status 字段，只保留 API 需要的字段
+        const recordsToSend = pending.map(({ status, synced_at, ...record }) => record);
+
+        console.log('📤 发送数据:', recordsToSend);
+
         const response = await fetch(`${serverURL}/sync`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ records: pending })
+            body: JSON.stringify({ records: recordsToSend })
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error('❌ 错误响应:', errorText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}\n${errorText}`);
         }
 
         const result = await response.json();
 
         if (result.success) {
-            // 标记为已同步
             const ids = pending.map(r => r.id);
             await markAsSynced(ids);
 
-            // 缓存分析数据
             if (result.analytics) {
                 await cacheAnalytics(result.analytics);
             }
 
             resultEl.className = 'sync-result success';
             resultEl.textContent = `✅ 同步成功！${result.synced_count} 条记录`;
-
-            // 更新界面
             updateUI();
 
         } else if (result.conflicts && result.conflicts.length > 0) {

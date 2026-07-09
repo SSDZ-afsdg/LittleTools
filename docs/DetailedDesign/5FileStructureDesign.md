@@ -39,9 +39,9 @@ smart-accounting/
 │   ├── css/
 │   │   └── style.css                   # ⏳ 待开发（样式）
 │   ├── js/
-│   │   ├── app.js                      # ⏳ 待开发（主逻辑）
-│   │   ├── db.js                       # ⏳ 待开发（IndexedDB 操作）
-│   │   ├── sync.js                     # ⏳ 待开发（同步逻辑）
+│   │   ├── app2.js                      # ⏳ 待开发（主逻辑）
+│   │   ├── db2.js                       # ⏳ 待开发（IndexedDB 操作）
+│   │   ├── sync2.js                     # ⏳ 待开发（同步逻辑）
 │   │   └── analytics.js                # ⏳ 待开发（分析展示）
 │   └── manifest.json                   # ⏳ 待开发（PWA 配置）
 │
@@ -85,9 +85,9 @@ smart-accounting/
 |---|---|
 | `index.html` | 主页面，4 个 Tab 布局 |
 | `css/style.css` | 全部样式 |
-| `js/app.js` | 路由切换、事件绑定、UI 更新 |
-| `js/db.js` | IndexedDB 操作（增删改查 + 缓存） |
-| `js/sync.js` | 同步逻辑（调用电脑 API） |
+| `js/app2.js` | 路由切换、事件绑定、UI 更新 |
+| `js/db2.js` | IndexedDB 操作（增删改查 + 缓存） |
+| `js/sync2.js` | 同步逻辑（调用电脑 API） |
 | `js/analytics.js` | 分析数据展示（图表 + 总结） |
 | `manifest.json` | PWA 配置（图标、启动样式） |
 
